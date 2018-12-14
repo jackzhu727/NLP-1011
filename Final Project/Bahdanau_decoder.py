@@ -365,7 +365,7 @@ class DecoderRNN(nn.Module):
 
 
 from torch.autograd import Variable
-from sacrebleu import raw_corpus_bleu
+from sacrebleu import corpus_bleu
 def evaluate(encoder, decoder, test_loader, k=1, max_length=None):
     output = []
     h_t = []
@@ -375,6 +375,7 @@ def evaluate(encoder, decoder, test_loader, k=1, max_length=None):
     for batch_idx, batch in enumerate(test_loader):
         src_batch, src_lens, trg_batch, trg_lens = batch
         batch_size = src_batch.shape[1]
+#         pos_index = Variable(torch.LongTensor(range(batch_size)) * k).view(-1, 1)
         with torch.no_grad():
             decoded_sentences = []
             for b in range(batch_size):
@@ -384,8 +385,7 @@ def evaluate(encoder, decoder, test_loader, k=1, max_length=None):
                 encoder_outputs, encoder_hidden = encoder(src_batch[:src_lens[b],b].unsqueeze(1),
                                                           torch.LongTensor([src_lens[b]]))
                 decoder_input = torch.LongTensor([[SOS_TOKEN]]).to(device)
-                decoder_hidden = (torch.sum(encoder_hidden[0][:decoder.n_layers*2],dim = 0).unsqueeze(0), 
-                                  torch.sum(encoder_hidden[1][:decoder.n_layers*2],dim = 0).unsqueeze(0))
+                decoder_hidden = encoder_hidden[:decoder.n_layers*2]
                 max_trg_len = trg_lens[b]
                 decoded_words = []
                 decoder_attentions = torch.zeros(batch_size, max_length, max_length)
@@ -399,6 +399,7 @@ def evaluate(encoder, decoder, test_loader, k=1, max_length=None):
                         decoder_output, decoder_hidden, decoder_attention = decoder(
                             decoder_input, decoder_hidden, [src_lens[b]], encoder_outputs)
                         topv, topi = decoder_output.data.topk(k)
+#                         decoder_attentions[di] = decoder_attention.data
                         for i in range(k):
                             possible.append(int(topi[:,i].squeeze().detach()))
                             curr[topv[0,i]+v] = [topi[:,i], decoder_hidden, encoder_outputs, 
@@ -423,13 +424,11 @@ def evaluate(encoder, decoder, test_loader, k=1, max_length=None):
                 if not decoded_words:
                     decoded_words = '<eos>'
                 trg_sentence = ' '.join(trg_sentence)
-                s = raw_corpus_bleu(decoded_words,trg_sentence).score
+                s = corpus_bleu(decoded_words,trg_sentence).score
                 score += s
         
+    print(count)
     return score/count
-
-encoder = EncoderRNN(input_lang.n_words, embed_size, hidden_size).to(device)
-decoder = DecoderRNN(embed_size, hidden_size, output_lang.n_words).to(device)
 
 
 def save_checkpoint(encoder, decoder, checkpoint_dir):
