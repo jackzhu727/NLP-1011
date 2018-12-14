@@ -1,19 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# Topic
-# ----
-# The goal of this project is for you to build a neural machine translation system and experience how recent advances have made their way. Each team will build the following sequence of neural translation systems for two language pairs, Vietnamese (Vi)→English (En) and Chinese (Zh)→En (prepared corpora will be provided):
-# 
-# - Recurrent neural network based encoder-decoder without attention
-# - Recurrent neural network based encoder-decoder with attention
-# - Replace the recurrent encoder with either convolutional or self-attention based encoder.
-# - [Optional] Build either or both fully self-attention translation system or/and multilingual translation system.
-# 
-# You are expected to implement these on your own (if necessary), experiment them with both language pairs, report their performance (measured in terms of automatic evaluation metrics) and analyze their behaviours and properties. 
-
-# In[1]:
-
 
 from __future__ import unicode_literals, print_function, division
 from io import open
@@ -35,9 +22,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # # Preprocess Data
-
-# In[2]:
-
 
 PAD_TOKEN = 0
 SOS_TOKEN = 1
@@ -72,10 +56,6 @@ class Lang:
         else:
             self.word2count[word] += 1
 
-
-# In[3]:
-
-
 # Turn a Unicode string to plain ASCII, thanks to
 # http://stackoverflow.com/a/518232/2809427
 def unicodeToAscii(s):
@@ -94,10 +74,6 @@ def normalizeString(s):
 def removeSpace(s):
     s = re.sub(' +',' ', s).strip()
     return s
-
-
-# In[4]:
-
 
 def readLangs(lang1, lang2, datasettype, reverse=False):
     print("Reading lines...")
@@ -125,10 +101,6 @@ def readLangs(lang1, lang2, datasettype, reverse=False):
     return input_lang, output_lang, pairs
 
 
-# In[5]:
-
-
-
 eng_prefixes = (
     "i am ", "i m ",
     "he is", "he s ",
@@ -146,9 +118,6 @@ def filterPair(p):
 
 def filterPairs(pairs):
     return [pair for pair in pairs if filterPair(pair)]
-
-
-# In[6]:
 
 
 def prepareData(lang1, lang2, datasettype, reverse=False):
@@ -171,9 +140,6 @@ print(random.choice(pairs))
 
 # # Dataset
 
-# In[7]:
-
-
 def indexesFromSentence(lang, sentence):
     return [lang.word2index[word]  
             if word in lang.word2index else 3 for word in sentence.split(' ')]
@@ -188,10 +154,6 @@ def tensorsFromPair(pair):
     target_tensor = tensorFromSentence(output_lang, pair[1]) 
     return (input_tensor, torch.cat((torch.tensor([SOS_TOKEN], dtype=torch.long, device=device),target_tensor)))
     
-
-
-# In[8]:
-
 
 class Dataset(Dataset):
     def __init__(self,datasettype):
@@ -231,8 +193,6 @@ def collate_fn(data):
 
 # ### verify dataset
 
-# In[9]:
-
 
 BATCH_SIZE = 16
 val_dataset = Dataset('dev')
@@ -244,20 +204,6 @@ val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
 print("Number of source-target pairs:", len(val_dataset))
 print("Input language: "+ val_dataset.input_lang.name + '('+str(val_dataset.input_lang.n_words)+')')
 print("Output language: "+ val_dataset.output_lang.name + '('+str(val_dataset.output_lang.n_words)+')')
-# for i, data in enumerate(val_loader):
-#     src_batch = data[0]
-#     src_lens = data[1]
-#     trg_batch = data[2]
-#     trg_lens = data[3]
-
-
-# In[ ]:
-
-
-
-
-
-# In[10]:
 
 
 train_data = Dataset('train')
@@ -277,11 +223,7 @@ decoder_learning_ratio = 5.0
 n_epochs = 20
 
 
-# # The Seq2Seq Model
-
 # ## Attention
-
-# In[11]:
 
 
 def attention(query, key, value, mask=None, dropout=None):
@@ -368,17 +310,6 @@ class Embeddings(nn.Module):
         return self.lut(x.long()) * math.sqrt(self.d_model)
 
 
-# 
-
-# In[ ]:
-
-
-
-
-
-# In[12]:
-
-
 import math, copy, time
 from torch.autograd import Variable
 
@@ -442,11 +373,6 @@ class EncoderLayer(nn.Module):
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
         return self.sublayer[1](x, self.feed_forward)
     
-
-
-# In[13]:
-
-
 class SelfAttnDecoder(nn.Module):
     "Generic N layer decoder with masking."
     def __init__(self, layer, N):
@@ -475,20 +401,6 @@ class DecoderLayer(nn.Module):
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))
         x = self.sublayer[1](x, lambda x: self.src_attn(x, m, m, src_mask))
         return self.sublayer[2](x, self.feed_forward)
-    
-# def subsequent_mask(size):
-#     "Mask out subsequent positions."
-#     attn_shape = (size, size)
-#     subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
-#     return torch.from_numpy(subsequent_mask) == 0
-
-# def make_std_mask(tgt, pad):
-#         "Create a mask to hide padding and future words."
-#         tgt_mask = (tgt != pad).unsqueeze(-2)
-#         mask = Variable(
-#             subsequent_mask(tgt.size(0)).type_as(tgt_mask.data)).unsqueeze(-1).repeat(1,1,tgt.size(-1))
-#         tgt_mask = tgt_mask & mask
-#         return tgt_mask
 
 def subsequent_mask(size):
     "Mask out subsequent positions."
@@ -539,9 +451,6 @@ class Generator(nn.Module):
         return F.log_softmax(self.proj(x), dim=-1)
 
 
-# In[14]:
-
-
 from torch.autograd import Variable
 from sacrebleu import raw_corpus_bleu
 def evaluate(model, test_loader, k=1, max_length=None):
@@ -550,8 +459,6 @@ def evaluate(model, test_loader, k=1, max_length=None):
     p = []
     score = 0
     count = 0
-#     encoder.eval()
-#     decoder.eval()
     for batch_idx, batch in enumerate(test_loader):
         src_batch, src_lens, trg_batch, trg_lens = batch
         batch_size = src_batch.shape[1]
@@ -608,34 +515,6 @@ def evaluate(model, test_loader, k=1, max_length=None):
                 score += s
     print(count)
     return score/count
-
-# c = copy.deepcopy
-# h = 8
-# d_model = 256
-# d_ff = 512
-# dropout = 0.1
-# src_vocab = input_lang.n_words
-# tgt_vocab = output_lang.n_words
-# N = 6
-# learning_rate = 0.001
-# attn = MultiHeadedAttention(h, d_model)
-# ff = PositionwiseFeedForward(d_model, d_ff, dropout)
-# position = PositionalEncoding(d_model, dropout)
-
-# model = EncoderDecoder(
-#         SelfAttnEncoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),
-#         SelfAttnDecoder(DecoderLayer(d_model, c(attn), c(attn), 
-#                              c(ff), dropout), N),
-#         nn.Sequential(Embeddings(d_model, src_vocab), c(position)),
-#         nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
-#         Generator(d_model, tgt_vocab)).to(device)
-
-# model.load_state_dict(torch.load('checkpoints/selfAttn-101218-074353.pth'))
-# model.eval()
-# evaluate(model, val_loader)
-
-
-# In[ ]:
 
 
 def save_checkpoint(model, checkpoint_dir):
@@ -727,58 +606,3 @@ criterion = nn.NLLLoss(ignore_index = PAD_TOKEN, reduction = 'none')
 
 
 train(train_data, batch_size, n_epochs, model, optimizer, criterion, checkpoint_dir)
-
-
-# In[ ]:
-
-
-
-
-
-# The Decoder
-# ------------------
-# decoder is also a RNN
-
-# ### 1. Decoder w/o Attention
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
