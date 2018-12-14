@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+################################################################################################
+## Citation: Lab8 - http://nlp.seas.harvard.edu/2018/04/03/attention.html#batches-and-masking ##
+################################################################################################
 
 from __future__ import unicode_literals, print_function, division
 from io import open
