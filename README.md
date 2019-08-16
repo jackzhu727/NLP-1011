@@ -11,4 +11,5 @@ https://github.com/jackzhu727/NLP-1011/blob/master/Assignment2.pdf
     - GRU/LSTM encoder-decoder
     - GRU/LSTM encoder-decoder with attention
     - Self-attentional Transformer
+
 https://github.com/jackzhu727/NLP-1011/blob/master/Final%20Project/NLP_projec
